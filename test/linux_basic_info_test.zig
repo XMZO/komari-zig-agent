@@ -70,6 +70,18 @@ test "cpuinfo parser handles common non-x86 model keys" {
     try std.testing.expect(linux.parseCpuNameFromCpuInfo("bogomips\t: 100.00\n") == null);
 }
 
+test "cpuinfo parser ignores processor indexes and prefers real model names" {
+    const mixed =
+        \\processor   : 0
+        \\vendor_id   : GenuineIntel
+        \\cpu family  : 6
+        \\model name  : Intel(R) Xeon(R) CPU E5-2690 v4 @ 2.60GHz
+        \\
+    ;
+    try std.testing.expectEqualStrings("Intel(R) Xeon(R) CPU E5-2690 v4 @ 2.60GHz", linux.parseCpuNameFromCpuInfo(mixed) orelse "");
+    try std.testing.expect(linux.parseCpuNameFromCpuInfo("Processor\t: 0\n") == null);
+}
+
 test "meminfo parser honors memory modes" {
     const text =
         \\MemTotal:       1000 kB

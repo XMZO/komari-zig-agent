@@ -1349,22 +1349,41 @@ fn cpuName(allocator: std.mem.Allocator) ![]const u8 {
 
 pub fn parseCpuNameFromCpuInfo(bytes: []const u8) ?[]const u8 {
     var it = std.mem.splitScalar(u8, bytes, '\n');
+    var fallback: ?[]const u8 = null;
     while (it.next()) |line| {
         const idx = std.mem.indexOfScalar(u8, line, ':') orelse continue;
         const key = std.mem.trim(u8, line[0..idx], " \t");
-        if (!isCpuNameKey(key)) continue;
         const value = std.mem.trim(u8, line[idx + 1 ..], " \t\r");
-        if (value.len != 0) return value;
+        if (value.len == 0) continue;
+
+        if (cpuNamePriority(key)) |priority| {
+            switch (priority) {
+                0 => return value,
+                1 => {
+                    if (fallback == null) fallback = value;
+                },
+                2 => {
+                    if (fallback == null and !isNumericCpuValue(value)) fallback = value;
+                },
+                else => {},
+            }
+        }
     }
+    return fallback;
+}
+
+fn cpuNamePriority(key: []const u8) ?u8 {
+    if (std.ascii.eqlIgnoreCase(key, "model name") or std.ascii.eqlIgnoreCase(key, "cpu model")) return 0;
+    if (std.ascii.eqlIgnoreCase(key, "model") or std.ascii.eqlIgnoreCase(key, "hardware")) return 1;
+    if (std.mem.eql(u8, key, "Processor")) return 2;
     return null;
 }
 
-fn isCpuNameKey(key: []const u8) bool {
-    return std.ascii.eqlIgnoreCase(key, "model name") or
-        std.ascii.eqlIgnoreCase(key, "model") or
-        std.ascii.eqlIgnoreCase(key, "hardware") or
-        std.ascii.eqlIgnoreCase(key, "processor") or
-        std.ascii.eqlIgnoreCase(key, "cpu model");
+fn isNumericCpuValue(value: []const u8) bool {
+    for (value) |ch| {
+        if (!std.ascii.isDigit(ch)) return false;
+    }
+    return value.len != 0;
 }
 
 fn memInfo() !common.MemInfo {
