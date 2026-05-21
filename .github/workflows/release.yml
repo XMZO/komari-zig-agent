@@ -11,6 +11,7 @@ on:
         required: true
 
 permissions:
+  actions: write
   contents: write
 
 env:
@@ -180,3 +181,22 @@ jobs:
           fi
           (cd dist && sha256sum komari-agent-* > SHA256SUMS)
           gh release upload "$TAG" dist/komari-agent-* dist/SHA256SUMS --clobber
+
+  fanout:
+    runs-on: ubuntu-latest
+    needs: [prepare, publish]
+    steps:
+      - name: Trigger release notes workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          set -eu
+          gh workflow run "Release notes from commits" -f release_tag="$TAG"
+      - name: Trigger docker publish workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          set -eu
+          gh workflow run "Publish Docker Image" -f version="$TAG" -f source_ref="$TAG"

@@ -3,6 +3,12 @@ name: Release notes from commits
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to update notes for, e.g. v0.1.32
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -16,7 +22,7 @@ jobs:
           fetch-depth: 0
       - shell: bash
         env:
-          CURRENT_TAG: ${{ github.event.release.tag_name }}
+          CURRENT_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
           REPO: ${{ github.repository }}
         run: |
           set -e
