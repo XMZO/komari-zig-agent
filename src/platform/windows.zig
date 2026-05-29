@@ -180,22 +180,22 @@ extern "kernel32" fn GetSystemTimes(
     lpIdleTime: *FILETIME,
     lpKernelTime: *FILETIME,
     lpUserTime: *FILETIME,
-) callconv(.c) windows.BOOL;
+) callconv(.winapi) windows.BOOL;
 
-extern "kernel32" fn GlobalMemoryStatusEx(lpBuffer: *MEMORYSTATUSEX) callconv(.c) windows.BOOL;
+extern "kernel32" fn GlobalMemoryStatusEx(lpBuffer: *MEMORYSTATUSEX) callconv(.winapi) windows.BOOL;
 
-extern "kernel32" fn GetTickCount64() callconv(.c) u64;
+extern "kernel32" fn GetTickCount64() callconv(.winapi) u64;
 
-extern "kernel32" fn GetLogicalDrives() callconv(.c) windows.DWORD;
+extern "kernel32" fn GetLogicalDrives() callconv(.winapi) windows.DWORD;
 
-extern "kernel32" fn GetDriveTypeW(lpRootPathName: [*:0]const u16) callconv(.c) windows.DWORD;
+extern "kernel32" fn GetDriveTypeW(lpRootPathName: [*:0]const u16) callconv(.winapi) windows.DWORD;
 
 extern "kernel32" fn GetDiskFreeSpaceExW(
     lpDirectoryName: [*:0]const u16,
     lpFreeBytesAvailableToCaller: ?*ULARGE_INTEGER,
     lpTotalNumberOfBytes: ?*ULARGE_INTEGER,
     lpTotalNumberOfFreeBytes: ?*ULARGE_INTEGER,
-) callconv(.c) windows.BOOL;
+) callconv(.winapi) windows.BOOL;
 
 extern "kernel32" fn GetVolumeInformationW(
     lpRootPathName: [*:0]const u16,
@@ -206,24 +206,24 @@ extern "kernel32" fn GetVolumeInformationW(
     lpFileSystemFlags: ?*windows.DWORD,
     lpFileSystemNameBuffer: ?[*]u16,
     nFileSystemNameSize: windows.DWORD,
-) callconv(.c) windows.BOOL;
+) callconv(.winapi) windows.BOOL;
 
 extern "kernel32" fn CreateToolhelp32Snapshot(
     dwFlags: windows.DWORD,
     th32ProcessID: windows.DWORD,
-) callconv(.c) windows.HANDLE;
+) callconv(.winapi) windows.HANDLE;
 
 extern "kernel32" fn Process32FirstW(
     hSnapshot: windows.HANDLE,
     lppe: *PROCESSENTRY32W,
-) callconv(.c) windows.BOOL;
+) callconv(.winapi) windows.BOOL;
 
 extern "kernel32" fn Process32NextW(
     hSnapshot: windows.HANDLE,
     lppe: *PROCESSENTRY32W,
-) callconv(.c) windows.BOOL;
+) callconv(.winapi) windows.BOOL;
 
-extern "kernel32" fn CloseHandle(hObject: windows.HANDLE) callconv(.c) windows.BOOL;
+extern "kernel32" fn CloseHandle(hObject: windows.HANDLE) callconv(.winapi) windows.BOOL;
 
 extern "advapi32" fn RegOpenKeyExW(
     hKey: windows.HKEY,
@@ -231,7 +231,7 @@ extern "advapi32" fn RegOpenKeyExW(
     ulOptions: windows.DWORD,
     samDesired: u32,
     phkResult: *windows.HKEY,
-) callconv(.c) i32;
+) callconv(.winapi) i32;
 
 extern "advapi32" fn RegQueryValueExW(
     hKey: windows.HKEY,
@@ -240,13 +240,13 @@ extern "advapi32" fn RegQueryValueExW(
     lpType: ?*windows.DWORD,
     lpData: ?[*]u8,
     lpcbData: *windows.DWORD,
-) callconv(.c) i32;
+) callconv(.winapi) i32;
 
-extern "advapi32" fn RegCloseKey(hKey: windows.HKEY) callconv(.c) i32;
+extern "advapi32" fn RegCloseKey(hKey: windows.HKEY) callconv(.winapi) i32;
 
-extern "iphlpapi" fn GetIfTable2(table: *?*MIB_IF_TABLE2) callconv(.c) windows.DWORD;
+extern "iphlpapi" fn GetIfTable2(table: *?*MIB_IF_TABLE2) callconv(.winapi) windows.DWORD;
 
-extern "iphlpapi" fn FreeMibTable(memory: *anyopaque) callconv(.c) void;
+extern "iphlpapi" fn FreeMibTable(memory: *anyopaque) callconv(.winapi) void;
 
 extern "iphlpapi" fn GetExtendedTcpTable(
     table: ?*anyopaque,
@@ -255,7 +255,7 @@ extern "iphlpapi" fn GetExtendedTcpTable(
     family: u32,
     table_class: u32,
     reserved: u32,
-) callconv(.c) windows.DWORD;
+) callconv(.winapi) windows.DWORD;
 
 extern "iphlpapi" fn GetExtendedUdpTable(
     table: ?*anyopaque,
@@ -264,7 +264,7 @@ extern "iphlpapi" fn GetExtendedUdpTable(
     family: u32,
     table_class: u32,
     reserved: u32,
-) callconv(.c) windows.DWORD;
+) callconv(.winapi) windows.DWORD;
 
 extern "iphlpapi" fn GetAdaptersAddresses(
     family: u32,
@@ -272,7 +272,7 @@ extern "iphlpapi" fn GetAdaptersAddresses(
     reserved: ?*anyopaque,
     adapter_addresses: ?*IP_ADAPTER_ADDRESSES_LH,
     size_pointer: *windows.DWORD,
-) callconv(.c) windows.DWORD;
+) callconv(.winapi) windows.DWORD;
 
 pub fn basicInfo(allocator: std.mem.Allocator) !common.BasicInfo {
     const ram = memInfo() catch common.MemInfo{};

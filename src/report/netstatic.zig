@@ -83,9 +83,9 @@ const MIB_IF_TABLE2 = extern struct {
 const IF_TYPE_SOFTWARE_LOOPBACK: u32 = 24;
 const NET_IF_ACCESS_LOOPBACK: u32 = 1;
 
-extern "iphlpapi" fn GetIfTable2(table: *?*MIB_IF_TABLE2) callconv(.c) windows.DWORD;
+extern "iphlpapi" fn GetIfTable2(table: *?*MIB_IF_TABLE2) callconv(.winapi) windows.DWORD;
 
-extern "iphlpapi" fn FreeMibTable(memory: *anyopaque) callconv(.c) void;
+extern "iphlpapi" fn FreeMibTable(memory: *anyopaque) callconv(.winapi) void;
 
 const Runtime = struct {
     allocator: std.mem.Allocator,
