@@ -2,13 +2,14 @@
 set -eu
 
 version="$(git describe --tags --abbrev=0 2>/dev/null || printf dev)"
+release_repo="${KOMARI_RELEASE_REPO:-luodaoyi/komari-zig-agent}"
 mkdir -p build
 
 build_one() {
   os="$1"; arch="$2"; target="$3"
   ext="${4:-}"
   echo "Building $os/$arch"
-  zig build -Doptimize=ReleaseSmall -Dversion="$version" -Dtarget="$target"
+  zig build -Doptimize=ReleaseSmall -Dversion="$version" -Drelease-repo="$release_repo" -Dtarget="$target"
   cp "zig-out/bin/komari-agent$ext" "build/komari-agent-$os-$arch$ext"
 }
 

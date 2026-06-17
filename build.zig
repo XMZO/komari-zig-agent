@@ -4,6 +4,7 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const version = b.option([]const u8, "version", "agent version") orelse "0.0.1";
+    const release_repo = b.option([]const u8, "release-repo", "GitHub owner/repo used for self updates") orelse "luodaoyi/komari-zig-agent";
     const coverage = b.option(bool, "coverage", "Run tests through kcov") orelse false;
     const coverage_dir = b.option([]const u8, "coverage-dir", "kcov output directory") orelse "zig-out/coverage";
     const zigpty_module = if (target.result.os.tag == .linux or target.result.os.tag == .macos) blk: {
@@ -21,6 +22,7 @@ pub fn build(b: *std.Build) void {
 
     const opts = b.addOptions();
     opts.addOption([]const u8, "version", version);
+    opts.addOption([]const u8, "release_repo", release_repo);
     const runtime_module = b.createModule(.{
         .root_source_file = b.path("src/runtime.zig"),
         .target = target,

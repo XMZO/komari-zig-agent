@@ -62,9 +62,9 @@ jobs:
       - run: |
           VERSION="${{ steps.release_meta.outputs.version }}"
           [ -n "$VERSION" ] || VERSION="${{ github.sha }}"
-          zig build -Doptimize=ReleaseSmall -Dversion="$VERSION" -Dtarget=x86_64-linux-musl
+          zig build -Doptimize=ReleaseSmall -Dversion="$VERSION" -Drelease-repo=${{ github.repository }} -Dtarget=x86_64-linux-musl
           cp zig-out/bin/komari-agent komari-agent-linux-amd64
-          zig build -Doptimize=ReleaseSmall -Dversion="$VERSION" -Dtarget=aarch64-linux-musl
+          zig build -Doptimize=ReleaseSmall -Dversion="$VERSION" -Drelease-repo=${{ github.repository }} -Dtarget=aarch64-linux-musl
           cp zig-out/bin/komari-agent komari-agent-linux-arm64
       - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f

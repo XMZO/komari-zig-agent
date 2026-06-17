@@ -144,7 +144,7 @@ jobs:
       - name: Build
         run: |
           set -eu
-          zig build -Doptimize=ReleaseSmall -Dversion=${{ needs.prepare.outputs.tag }} -Dtarget=${{ matrix.target }}
+          zig build -Doptimize=ReleaseSmall -Dversion=${{ needs.prepare.outputs.tag }} -Drelease-repo=${{ github.repository }} -Dtarget=${{ matrix.target }}
           mkdir -p dist
           binary="komari-agent"
           asset="komari-agent-${{ matrix.os }}-${{ matrix.arch }}"

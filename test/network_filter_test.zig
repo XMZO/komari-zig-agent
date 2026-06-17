@@ -71,6 +71,14 @@ test "ip route parser extracts source address from allowed interface" {
     ) orelse "";
     try std.testing.expectEqualStrings("2001:db8::10", ipv6);
 
+    const ipv6_ra = linux.parseIpRouteGetSource(
+        "2001:4860:4860::8888 from :: via fe80::1 dev ens3 proto ra src 2001:db8::20 metric 1024 pref medium",
+        "",
+        "",
+        .ipv6,
+    ) orelse "";
+    try std.testing.expectEqualStrings("2001:db8::20", ipv6_ra);
+
     try std.testing.expect(
         linux.parseIpRouteGetSource(
             "2001:4860:4860::8888 from :: via 2001:db8::1 dev lo src fe80::1 metric 100 pref medium",

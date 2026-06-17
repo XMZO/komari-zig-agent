@@ -1,11 +1,12 @@
 $ErrorActionPreference = "Stop"
 $version = (cmd /c "git describe --tags --abbrev=0 2>nul")
 if ($LASTEXITCODE -ne 0 -or -not $version) { $version = "dev" }
+$releaseRepo = if ($env:KOMARI_RELEASE_REPO) { $env:KOMARI_RELEASE_REPO } else { "luodaoyi/komari-zig-agent" }
 New-Item -ItemType Directory -Force -Path build | Out-Null
 
 function Build-One($os, $arch, $target, $ext = "") {
     Write-Host "Building $os/$arch"
-    zig build -Doptimize=ReleaseSmall "-Dversion=$version" "-Dtarget=$target"
+    zig build -Doptimize=ReleaseSmall "-Dversion=$version" "-Drelease-repo=$releaseRepo" "-Dtarget=$target"
     Copy-Item "zig-out/bin/komari-agent$ext" "build/komari-agent-$os-$arch$ext" -Force
 }
 
