@@ -113,9 +113,9 @@ pub fn main(init: std.process.Init.Minimal) !void {
     printMonitoringLists(allocator, cfg) catch {};
 
     if (shutdown_requested.load(.acquire)) return;
-    try runForegroundBasicInfoUpload(allocator, cfg, false, .startup);
+    const startup_outcome = try runForegroundBasicInfoUpload(allocator, cfg, false, .startup);
     if (shutdown_requested.load(.acquire)) return;
-    startBasicInfoLoop(allocator, cfg);
+    startBasicInfoLoop(allocator, cfg, basic_info_flow.shouldStartBackgroundLoopImmediately(startup_outcome));
 
     if (shutdown_requested.load(.acquire)) return;
 
@@ -124,7 +124,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
             try stdout.print("Report websocket exited: {s}\n", .{@errorName(err)});
         };
         if (shutdown_requested.load(.acquire)) break;
-        try runForegroundBasicInfoUpload(allocator, cfg, false, .websocket_reconnect);
+        _ = try runForegroundBasicInfoUpload(allocator, cfg, false, .websocket_reconnect);
     }
     try stdout.writeAll("shutting down gracefully...\n");
 }
@@ -217,7 +217,7 @@ fn runForegroundBasicInfoUpload(
     cfg: config.Config,
     allow_external_ip_lookup: bool,
     context: basic_info_flow.UploadContext,
-) !void {
+) !basic_info_flow.ForegroundUploadOutcome {
     var stdout_buf: [4096]u8 = undefined;
     var stdout = compat.fileWriter(std.Io.File.stdout(), &stdout_buf);
     defer stdout.flush() catch {};
@@ -228,28 +228,32 @@ fn runForegroundBasicInfoUpload(
         .deferred => debug.log("basic info upload deferred during {s}", .{basic_info_flow.contextLabel(context)}),
         .failure => |err| debug.log("basic info upload failed during {s}: {s}", .{ basic_info_flow.contextLabel(context), @errorName(err) }),
     }
+    return outcome;
 }
 
-fn startBasicInfoLoop(allocator: std.mem.Allocator, cfg: config.Config) void {
-    const thread = std.Thread.spawn(.{ .stack_size = thread_stacks.tls_worker_stack_size }, basicInfoLoop, .{ allocator, cfg }) catch return;
+fn startBasicInfoLoop(allocator: std.mem.Allocator, cfg: config.Config, start_immediately: bool) void {
+    const thread = std.Thread.spawn(.{ .stack_size = thread_stacks.tls_worker_stack_size }, basicInfoLoop, .{ allocator, cfg, start_immediately }) catch return;
     thread.detach();
 }
 
-fn basicInfoLoop(allocator: std.mem.Allocator, cfg: config.Config) void {
+fn basicInfoLoop(allocator: std.mem.Allocator, cfg: config.Config, start_immediately: bool) void {
     const mins: u64 = if (cfg.info_report_interval <= 0) 5 else @intCast(cfg.info_report_interval);
+    var first = true;
     while (true) {
+        if (!start_immediately or !first) {
+            compat.sleep(mins * 60 * std.time.ns_per_s);
+        }
+        first = false;
         var arena = std.heap.ArenaAllocator.init(allocator);
         defer arena.deinit();
         const scratch = arena.allocator();
         var info = provider.basicInfo(scratch) catch {
-            compat.sleep(mins * 60 * std.time.ns_per_s);
             continue;
         };
         applyIpConfig(scratch, cfg, &info, true) catch {};
         basic_info.upload(scratch, cfg, info) catch |err| {
             debug.log("background basic info upload failed: {s}", .{@errorName(err)});
         };
-        compat.sleep(mins * 60 * std.time.ns_per_s);
     }
 }
 

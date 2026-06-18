@@ -811,7 +811,10 @@ fn routeSourceAddress(
 }
 
 pub fn canProbeIpv6(allocator: std.mem.Allocator, include_nics: []const u8, exclude_nics: []const u8) !bool {
-    const output = try commandOutput(allocator, &.{ "ip", "-6", "route", "get", "2001:4860:4860::8888" });
+    const output = commandOutput(allocator, &.{ "ip", "-6", "route", "get", "2001:4860:4860::8888" }) catch |err| {
+        debug.log("ipv6 probe route check failed: {s}", .{@errorName(err)});
+        return false;
+    };
     defer allocator.free(output);
     const probeable = canProbeRoute(output, include_nics, exclude_nics, .ipv6);
     if (!probeable) {

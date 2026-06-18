@@ -27,6 +27,12 @@ test "foreground upload deferral is reported without failure" {
     try std.testing.expectEqualStrings("Basic info upload deferred during startup: waiting for public IP refresh\n", out.written());
 }
 
+test "foreground upload deferral is the only case that restarts background loop immediately" {
+    try std.testing.expect(!flow.shouldStartBackgroundLoopImmediately(.success));
+    try std.testing.expect(flow.shouldStartBackgroundLoopImmediately(.deferred));
+    try std.testing.expect(!flow.shouldStartBackgroundLoopImmediately(.{ .failure = error.Timeout }));
+}
+
 test "foreground upload failure during startup is tolerated and logged" {
     var out = std.Io.Writer.Allocating.init(std.testing.allocator);
     defer out.deinit();

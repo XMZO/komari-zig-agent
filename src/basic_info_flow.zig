@@ -12,6 +12,10 @@ pub const ForegroundUploadOutcome = union(enum) {
     failure: anyerror,
 };
 
+pub fn shouldStartBackgroundLoopImmediately(outcome: ForegroundUploadOutcome) bool {
+    return outcome == .deferred;
+}
+
 pub fn contextLabel(context: UploadContext) []const u8 {
     return switch (context) {
         .startup => "startup",
