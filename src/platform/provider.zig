@@ -49,7 +49,7 @@ pub fn localIpFromInterfaces(allocator: std.mem.Allocator, include_nics: []const
 }
 
 pub fn canProbeIpv6(allocator: std.mem.Allocator, include_nics: []const u8, exclude_nics: []const u8) bool {
-    if (@hasDecl(impl, "canProbeIpv6")) return impl.canProbeIpv6(allocator, include_nics, exclude_nics) catch true;
+    if (@hasDecl(impl, "canProbeIpv6")) return impl.canProbeIpv6(allocator, include_nics, exclude_nics) catch false;
     return true;
 }
 
