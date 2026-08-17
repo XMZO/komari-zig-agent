@@ -28,7 +28,8 @@ Zig 版 `komari-agent`，目标是直接替换原 Go agent，并保持 Komari �
 
 ## 状态
 
-- 功能兼容：官方 Go agent `1.2.13` 的启动参数、配置来源、BasicInfo、Report WebSocket、任务执行、Ping、Web SSH、自动发现、Cloudflare Access、代理、自定义 DNS/IP、自更新、安装和替换脚本均已实现。
+- 功能兼容：官方 Go agent `1.2.60` 的启动参数、配置来源、BasicInfo、Report WebSocket、任务执行、Ping、Web SSH、自动发现、代理、自定义 DNS/IP、自更新、安装和替换脚本均已实现；继续保留可选 Cloudflare Access 凭据支持。
+- 上游增量：已吸收 `Snapshot-2607270914` 的非 root systemd user 安装和 Windows NVIDIA 详细 GPU 指标，并继续支持更早加入的 Linux `loong64` 构建与安装。
 - 支持系统：Linux、FreeBSD、macOS、Windows；Linux 覆盖 Debian/Ubuntu/Kali、Fedora/CentOS Stream/Rocky/Alma、OpenWrt、Raspberry Pi OS profile、Synology DSM profile。
 - Release 资产：自动构建 20 个二进制，其中 Linux 11 架构：`amd64`、`arm64`、`386`、`arm`、`mips`、`mipsel`、`mips64`、`mips64el`、`riscv64`、`s390x`、`loong64`。
 - 自动化测试：Ubuntu、macOS、Windows 原生单测；Debian/Ubuntu/Kali 和红帽系容器单测；FreeBSD VM 单测；OpenWrt、Raspberry Pi OS、Synology DSM profile 与主流 Linux 发行版 agent 启动烟测；Linux 多架构 QEMU agent 启动烟测。
@@ -77,215 +78,23 @@ Zig 版 `komari-agent`，目标是直接替换原 Go agent，并保持 Komari �
 - 上报 JSON、月流量采样、`/proc` 热路径已尽量改为栈缓冲，减少重复堆申请。
 - 二进制体积明显小，适合 OpenWrt、小内存 VPS、低端 ARM/MIPS 设备。
 
-## 安装 Zig 版
+## 一键替换原 Go Agent
 
-最常用：
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/install.sh | sudo sh -s -- \
-  --endpoint https://panel.example \
-  --token TOKEN
-```
-
-没有 `curl` 时：
+已经装了默认服务名为 `komari-agent` 的官方 Go Agent？直接执行下面一条命令即可替换为 Zig 版。原有的面板地址、Token 和上报间隔都会保留，无需重新配置。
 
 ```sh
-wget -O- https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/install.sh | sudo sh -s -- \
-  --endpoint https://panel.example \
-  --token TOKEN
+curl -fsSL https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/bd2e0b8de76a11601d57b1663e9002912e1a82f2/replace.sh | sudo sh
 ```
 
-国内网络或无法直连 `raw.githubusercontent.com` 时，可先用镜像拉取安装脚本。`jsDelivr` 适合拉取仓库静态文件；GitHub 代理可按实际网络择一：
+国内网络无法访问 GitHub 时，使用 jsDelivr CDN：
 
 ```sh
-# jsDelivr CDN
-curl -fsSL https://cdn.jsdelivr.net/gh/luodaoyi/komari-zig-agent@main/install.sh | sudo sh -s -- \
-  --endpoint https://panel.example \
-  --token TOKEN
-
-# gh.llkk.cc
-curl -fsSL https://gh.llkk.cc/https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/install.sh | sudo sh -s -- \
-  --endpoint https://panel.example \
-  --token TOKEN
-
-# gh-proxy.com
-curl -fsSL https://gh-proxy.com/https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/install.sh | sudo sh -s -- \
-  --endpoint https://panel.example \
-  --token TOKEN
-
-# ghproxy.net
-curl -fsSL https://ghproxy.net/https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/install.sh | sudo sh -s -- \
-  --endpoint https://panel.example \
-  --token TOKEN
-
-# ghfast.top
-curl -fsSL https://ghfast.top/https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/install.sh | sudo sh -s -- \
-  --endpoint https://panel.example \
-  --token TOKEN
-
-# ghproxy.cc
-curl -fsSL https://ghproxy.cc/https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/install.sh | sudo sh -s -- \
-  --endpoint https://panel.example \
-  --token TOKEN
+curl -fsSL https://cdn.jsdelivr.net/gh/luodaoyi/komari-zig-agent@bd2e0b8de76a11601d57b1663e9002912e1a82f2/replace.sh | sudo sh
 ```
 
-若脚本能下载，但后续 Release 资产下载仍慢或失败，可显式指定下载代理：
+脚本会自动识别 CPU 架构，下载匹配的 Release，校验 `SHA256SUMS`，备份原 Go Agent，替换后重启原服务。下载、校验或启动失败时不会覆盖正在使用的 Agent；systemd 启动失败会自动回滚。
 
-```sh
-curl -fsSL https://cdn.jsdelivr.net/gh/luodaoyi/komari-zig-agent@main/install.sh | sudo sh -s -- \
-  --install-ghproxy https://gh.llkk.cc \
-  --endpoint https://panel.example \
-  --token TOKEN
-```
-
-指定版本：
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/install.sh | sudo sh -s -- \
-  --install-version v0.1.6 \
-  --endpoint https://panel.example \
-  --token TOKEN
-```
-
-Windows PowerShell 管理员安装：
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "iwr 'https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/install.ps1' -UseBasicParsing -OutFile 'install.ps1'; & '.\install.ps1' '-e' 'https://panel.example' '-t' 'TOKEN'"
-```
-
-Windows 国内网络可先用镜像拉脚本，脚本内 Release 资产下载仍可用 `--install-ghproxy`：
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "iwr 'https://gh.llkk.cc/https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/install.ps1' -UseBasicParsing -OutFile 'install.ps1'; & '.\install.ps1' '--install-ghproxy' 'https://gh.llkk.cc' '-e' 'https://panel.example' '-t' 'TOKEN'"
-```
-
-常用安装参数：
-
-```text
---install-dir <dir>            安装目录，默认 Linux/FreeBSD 为 /opt/komari
---install-service-name <name>  服务名，默认 komari-agent
---install-ghproxy <url>        指定 GitHub 下载代理；不指定时直连失败会自动测速代理池
---install-version <tag>        指定 Release tag；不填则用 latest
---debug-log                    输出关键启动/连接调试日志；也可用 `AGENT_DEBUG_LOG=1`
-```
-
-脚本会自动识别 Linux、OpenWrt/procd、OpenRC、systemd、FreeBSD rc.d、macOS launchd，并创建服务。
-
-## 一键替换原 Go agent
-
-在已安装 Go 版 `komari-agent` 的机器上运行：
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/replace.sh | sudo sh
-```
-
-无 `curl`：
-
-```sh
-wget -O- https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/replace.sh | sudo sh
-```
-
-国内网络或无法直连 `raw.githubusercontent.com` 时，可用以下命令替换：
-
-```sh
-# jsDelivr CDN
-curl -fsSL https://cdn.jsdelivr.net/gh/luodaoyi/komari-zig-agent@main/replace.sh | sudo sh
-
-# gh.llkk.cc
-curl -fsSL https://gh.llkk.cc/https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/replace.sh | sudo sh
-
-# gh-proxy.com
-curl -fsSL https://gh-proxy.com/https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/replace.sh | sudo sh
-
-# ghproxy.net
-curl -fsSL https://ghproxy.net/https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/replace.sh | sudo sh
-
-# ghfast.top
-curl -fsSL https://ghfast.top/https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/replace.sh | sudo sh
-
-# ghproxy.cc
-curl -fsSL https://ghproxy.cc/https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/replace.sh | sudo sh
-```
-
-若脚本能下载，但 Release 资产下载仍慢或失败，可显式指定下载代理：
-
-```sh
-curl -fsSL https://cdn.jsdelivr.net/gh/luodaoyi/komari-zig-agent@main/replace.sh | \
-  sudo sh -s -- --ghproxy https://gh.llkk.cc
-```
-
-指定版本替换：
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/replace.sh | sudo sh -s -- --version v0.1.6
-```
-
-OpenWrt 或非标准路径可显式指定：
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/replace.sh | sudo sh -s -- \
-  --service komari-agent \
-  --binary /opt/komari/agent
-```
-
-替换脚本参数：
-
-```text
---repo <owner/repo>      Release 仓库，默认 luodaoyi/komari-zig-agent
---version <tag>          指定版本；不填则用 latest
---ghproxy <url>          指定 GitHub 下载代理；不指定时直连失败会自动测速代理池
---service <name>         服务名，默认 komari-agent
---binary <path>          直接指定原 agent 二进制路径
---install-dir <dir>      找不到服务路径时的默认目录，默认 /opt/komari
-```
-
-替换行为：
-
-- 自动识别 CPU 架构并下载对应 Release 资产。
-- 下载优先直连 GitHub；直连失败后自动测速多个 GitHub 代理并选择可用源。
-- 同步下载 Release 中的 `SHA256SUMS` 并校验二进制，校验失败不会替换。
-- 下载失败会重试；下载后会先试运行二进制，避免把错误架构或错误页面写入服务。
-- 停止原服务，备份原二进制为 `*.go-backup.<timestamp>`。
-- 替换二进制并重启原服务；systemd 服务启动失败会自动回滚到备份。
-- 不改 endpoint、token、上报间隔等业务参数。
-
-自动代理池可通过环境变量覆盖：
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/replace.sh | \
-  sudo env KOMARI_GITHUB_PROXIES="https://gh.llkk.cc https://gh-proxy.com https://ghproxy.net" sh
-```
-
-## 只更新二进制
-
-若机器已经装好 Zig 版 agent，只想手动换到最新二进制，不想重写服务、不想生成 `*.go-backup.*` 残留，可用：
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/update-binary.sh | sudo sh
-```
-
-国内网络或无法直连 `raw.githubusercontent.com` 时：
-
-```sh
-curl -fsSL https://cdn.jsdelivr.net/gh/luodaoyi/komari-zig-agent@main/update-binary.sh | sudo sh
-```
-
-指定版本或路径：
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/main/update-binary.sh | sudo sh -s -- \
-  --version v0.1.16 \
-  --service komari-agent \
-  --binary /opt/komari/agent
-```
-
-纯二进制更新行为：
-
-- 不修改 systemd、OpenRC、OpenWrt init 脚本，不改 endpoint、token、interval、配置文件。
-- 自动从 systemd `ExecStart`、init.d 脚本或 `--binary` 找出现有二进制路径。
-- 下载 Release 资产和 `SHA256SUMS`，校验失败或预检失败时不替换旧二进制。
-- 替换时只覆盖目标二进制，不生成 `.bak` 或 `*.go-backup.*`。
-- 替换后重启原服务；若重启失败会报错，但不会额外生成备份文件。
+> 适用于 Linux 和 OpenWrt 的已有 Go Agent 安装。自定义服务名、Windows、首次安装、指定版本或自定义路径等高级场景，请查看脚本参数或 GitHub Release。
 
 ## 自更新
 
@@ -398,13 +207,11 @@ Action 会自动：
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=luodaoyi%2Fkomari-zig-agent&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=luodaoyi/komari-zig-agent&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=luodaoyi/komari-zig-agent&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=luodaoyi/komari-zig-agent&type=date&legend=top-left" />
- </picture>
+<a href="https://github.com/luodaoyi/komari-zig-agent/tree/star-history">
+  <img alt="Star History Chart" src="https://raw.githubusercontent.com/luodaoyi/komari-zig-agent/star-history/star-history.svg" />
 </a>
+
+图表由仓库自身的 GitHub Actions 每日更新；历史数据和 SVG 保存在独立的 `star-history` 分支，不依赖第三方图表服务。
 
 ## 验证
 

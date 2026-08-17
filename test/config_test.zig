@@ -3,7 +3,7 @@ const config = @import("config");
 
 test "defaults match Go agent" {
     const cfg = config.Config.default();
-    try std.testing.expectEqual(@as(f64, 1.0), cfg.interval);
+    try std.testing.expectEqual(@as(f64, 3.0), cfg.interval);
     try std.testing.expectEqual(@as(i32, 3), cfg.max_retries);
     try std.testing.expectEqual(@as(i32, 5), cfg.reconnect_interval);
     try std.testing.expectEqual(@as(i32, 5), cfg.info_report_interval);
@@ -218,6 +218,15 @@ test "check-mem subcommand is recognized" {
     const args = [_][]const u8{ "komari-agent", "check-mem" };
     const cfg = try config.parseArgs(arena.allocator(), &args);
     try std.testing.expectEqual(config.Command.check_mem, cfg.command);
+}
+
+test "socket-timeout-smoke subcommand is recognized" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const args = [_][]const u8{ "komari-agent", "socket-timeout-smoke" };
+    const cfg = try config.parseArgs(arena.allocator(), &args);
+    try std.testing.expectEqual(config.Command.socket_timeout_smoke, cfg.command);
 }
 
 test "unknown flags are ignored" {

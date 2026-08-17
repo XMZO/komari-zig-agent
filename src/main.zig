@@ -8,6 +8,7 @@ const common = @import("platform/common.zig");
 const provider = @import("platform/provider.zig");
 const ip = @import("protocol/ip.zig");
 const netstatic = @import("report_netstatic");
+const net = @import("net");
 const ping = @import("protocol/ping.zig");
 const report_ws = @import("protocol/report_ws.zig");
 const v2_state = @import("protocol/v2_state.zig");
@@ -76,6 +77,11 @@ pub fn main(init: std.process.Init.Minimal) !void {
         return;
     }
 
+    if (cfg.command == .socket_timeout_smoke) {
+        try net.socketTimeoutSmoke(30_000);
+        return;
+    }
+
     if (cfg.show_warning) return;
 
     try update.recoverPendingUpdate(allocator);
@@ -92,12 +98,15 @@ pub fn main(init: std.process.Init.Minimal) !void {
     }
 
     if (cfg.month_rotate != 0) {
-        netstatic.startOrContinue() catch |err| try stdout.print("Failed to start netstatic monitoring: {s}\n", .{@errorName(err)});
-        const nics = provider.interfaceList(allocator, cfg.include_nics, cfg.exclude_nics) catch &.{};
-        netstatic.setNewConfig(.{ .nics = nics }) catch |err| try stdout.print("Failed to set netstatic config: {s}\n", .{@errorName(err)});
-        netstatic_active.store(true, .release);
+        if (netstatic.startOrContinue()) |_| {
+            const nics = provider.interfaceList(allocator, cfg.include_nics, cfg.exclude_nics) catch &.{};
+            netstatic.setNewConfig(.{ .nics = nics }) catch |err| try stdout.print("Failed to set netstatic config: {s}\n", .{@errorName(err)});
+            netstatic_active.store(true, .release);
+        } else |err| {
+            try stdout.print("Failed to start netstatic monitoring: {s}; existing state file was not modified\n", .{@errorName(err)});
+        }
     }
-    defer if (cfg.month_rotate != 0) netstatic.stop() catch {};
+    defer if (netstatic_active.load(.acquire)) netstatic.stop() catch {};
 
     if (!cfg.disable_auto_update) {
         const has_pending_update = update.hasPendingUpdate(allocator);
@@ -206,8 +215,13 @@ fn uploadBasicInfoOnce(allocator: std.mem.Allocator, cfg: config.Config, allow_e
     var info = try provider.basicInfo(scratch);
     debug.log("basic info collected: local_ipv4={s} local_ipv6={s}", .{ info.ipv4, info.ipv6 });
     try applyIpConfig(scratch, cfg, &info, allow_external_ip_lookup);
-    if (!allow_external_ip_lookup and info.ipv4.len == 0) {
-        debug.log("deferring foreground basic info upload until public IP refresh because IPv4 is empty", .{});
+    if (basic_info_flow.shouldDeferForPublicIPv4(
+        allow_external_ip_lookup,
+        cfg.get_ip_addr_from_nic,
+        cfg.custom_ipv4,
+        ip.isPubliclyRoutableIPv4(info.ipv4),
+    )) {
+        debug.log("deferring foreground basic info upload until public IP refresh because IPv4 is not publicly routable: {s}", .{info.ipv4});
         return error.BasicInfoDeferredUntilPublicIp;
     }
     const info_json = try basic_info.allocBasicInfoJson(scratch, info, true, true);
